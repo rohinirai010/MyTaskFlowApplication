@@ -1,142 +1,232 @@
 import React, { useState, useEffect } from "react";
 import { Clock, CheckSquare, AlertTriangle, List } from "lucide-react";
 import DashboardTable from "./DashboardTable";
-import EmployeeTasksTable from "./EmployeeTaskTable";
-import TodayTaskEmployeeTable from "./TodayTaskEmployeeTable";
-import AdminTaskAssignmentTable from "./AdminTaskAssignmentTable";
+import ConnectedTaskTables from "./ConnectedTaskTables";
 
 // TaskCard Component
 const TaskCard = ({ icon, title, count, color }) => (
   <div
-    className={`p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md flex items-center space-x-4 ${color}`}
+    className={`p-4 bg-white rounded-xl shadow-md flex items-center space-x-4 ${color}`}
   >
     {icon}
     <div>
-      <h3 className="text-gray-500 dark:text-gray-300">{title}</h3>
+      <h3 className="text-gray-500">{title}</h3>
       <p className="text-2xl font-bold">{count}</p>
     </div>
   </div>
 );
 
-// Timer Component for Pending Tasks
-const PendingTaskTimer = ({ pendingTasks, color }) => {
-  const [time, setTime] = useState(0);
+// Dashboard Component
+const Dashboard = () => {
+  const [userRole, setUserRole] = useState("");
+  const [username, setUsername] = useState("");
+  const today = new Date().toISOString().split('T')[0];
+  
+  const [tasks, setTasks] = useState([
+    {
+      id: 1,
+      client: "Goldmines",
+      package: "Starter",
+      startDate: "2025-01-22",
+      status: "Pending",
+      completedSubtasks: 0,
+      totalSubtasks: 29,
+      dailyCompletions: {
+        [today]: { posts: false, reels: false, mockups: false },
+      },
+    },
+    {
+      id: 2,
+      client: "Money Mining",
+      package: "Premium",
+      startDate: "2025-01-22",
+      status: "Pending",
+      completedSubtasks: 0,
+      totalSubtasks: 49,
+      dailyCompletions: {
+        [today]: { posts: false, reels: false, mockups: false },
+      },
+    },
+    {
+      id: 3,
+      client: "Billion Bucks",
+      package: "Super Pro",
+      startDate: "2025-01-22",
+      status: "Pending",
+      completedSubtasks: 0,
+      totalSubtasks: 80,
+      dailyCompletions: {
+        [today]: { posts: false, reels: false, mockups: false },
+      },
+    },
+  ]);
+
+  const [taskMetrics, setTaskMetrics] = useState({
+    totalTasks: 0,
+    totalSubtasks: 0,
+    pendingSubtasks: 0,  // Changed to track pending subtasks
+    completedSubtasks: 0,  // Changed to track completed subtasks
+    dailyTasksTotal: 0,
+    dailyTasksCompleted: 0
+  });
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTime((prevTime) => prevTime + 1);
-    }, 1000);
+    const roleFromSession = sessionStorage.getItem("userRole");
+    const roleFromLocal = localStorage.getItem("userRole");
+    setUserRole(roleFromSession || roleFromLocal || "");
 
-    return () => clearInterval(timer);
+    const usernameFromSession = sessionStorage.getItem("username");
+    const usernameFromLocal = localStorage.getItem("username");
+    setUsername(usernameFromSession || usernameFromLocal || "");
   }, []);
 
-  const formatTime = (totalSeconds) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+  // Handler for task completion
+  const handleTaskCompletion = (taskId, taskType) => {
+    setTasks(prevTasks => {
+      const updatedTasks = prevTasks.map(task => {
+        if (task.id === taskId) {
+          const currentValue = task.dailyCompletions[today]?.[taskType] || false;
+          const updatedCompletions = {
+            ...task.dailyCompletions,
+            [today]: {
+              ...(task.dailyCompletions[today] || {}),
+              [taskType]: !currentValue,
+            },
+          };
+          
+          // Update completedSubtasks count
+          const completedCount = Object.values(updatedCompletions[today]).filter(Boolean).length;
+          
+          return {
+            ...task,
+            dailyCompletions: updatedCompletions,
+            completedSubtasks: completedCount,
+            status: completedCount === task.totalSubtasks ? "Completed" : "Pending"
+          };
+        }
+        return task;
+      });
+      updateMetrics(updatedTasks);
+      return updatedTasks;
+    });
+  };
 
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  // Updated metrics calculation
+  const updateMetrics = (currentTasks) => {
+    let dailyTasksTotal = 0;
+    let dailyTasksCompleted = 0;
+    let totalSubtasks = 0;
+    let completedSubtasks = 0;
+
+    currentTasks.forEach(task => {
+      // Calculate total subtasks across all clients
+      totalSubtasks += task.totalSubtasks;
+      completedSubtasks += task.completedSubtasks;
+
+      const todayTasks = task.dailyCompletions[today];
+      if (todayTasks) {
+        dailyTasksTotal += Object.keys(todayTasks).length;
+        dailyTasksCompleted += Object.values(todayTasks).filter(Boolean).length;
+      }
+    });
+
+    const pendingSubtasks = totalSubtasks - completedSubtasks;
+
+    setTaskMetrics({
+      totalTasks: currentTasks.length,
+      totalSubtasks,
+      pendingSubtasks,
+      completedSubtasks,
+      dailyTasksTotal,
+      dailyTasksCompleted
+    });
+  };
+
+  useEffect(() => {
+    updateMetrics(tasks);
+  }, []);
+
+  const calculatePendingDailyTasks = () => {
+    return taskMetrics.dailyTasksTotal - taskMetrics.dailyTasksCompleted;
   };
 
   return (
-    <div
-      className={`p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md flex items-center space-x-4 ${color}`}
-    >
-      <Clock className="text-red-400" />
-      <div>
-        <h3 className="text-gray-500 dark:text-gray-300">Pending Tasks Time</h3>
-        <p className="text-2xl font-bold">{formatTime(time)}</p>
-        <p className="text-sm text-gray-400">Active Tasks: {pendingTasks}</p>
-      </div>
-    </div>
-  );
-};
-
-// Dashboard Component
-const Dashboard = ({ userRole }) => {
-  // Simulated task data (in a real app, this would come from an API or state management)
-  const totalTasks = 25;
-  const pendingTasks = 10;
-  const completedTasks = 15;
-  const overdueTasks = 3;
-
-  return (
-    <div className="py-2 sm:py-6 px-2 sm:px-4 min-h-screen bg-blue-50 rounded-xl dark:bg-[#0B0E11] w-full">
-      {userRole === "admin" ? (
-        <h1 className="text-2xl sm:text-3xl text-center sm:text-left font-medium text-gray-800 dark:text-white mb-6">
-          Admin Dashboard
+    <div className="py-2 sm:py-6 px-2 sm:px-4 min-h-screen bg-blue-50 rounded-xl w-full">
+      {username && (
+        <h1 className="text-2xl sm:text-3xl font-bold sm:font-medium px-3 sm:px-0 text-center sm:text-left text-gray-800 mb-6">
+          Welcome, {username}!
         </h1>
-      ) : userRole === "employee" ? (
-        <h1 className="text-3xl font-medium text-gray-800 dark:text-white mb-6">
-          Employee Dashboard
-        </h1>
-      ) : null}
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-[1.5rem]  sm:mb-[3rem]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-[1.5rem] sm:mb-[3rem]">
         {userRole === "admin" ? (
-          // Admin Cards (Unchanged)
           <>
             <TaskCard
               icon={<List className="text-blue-500" />}
-              title="Total Tasks"
-              count={totalTasks}
+              title="Total Clients"
+              count={taskMetrics.totalTasks}
               color="border-l-4 border-blue-500"
+            />
+            <TaskCard
+              icon={<List className="text-purple-500" />}
+              title="Total Tasks"
+              count={taskMetrics.totalSubtasks}
+              color="border-l-4 border-purple-500"
             />
             <TaskCard
               icon={<AlertTriangle className="text-yellow-500" />}
               title="Pending Tasks"
-              count={pendingTasks}
+              count={taskMetrics.pendingSubtasks}
               color="border-l-4 border-yellow-500"
             />
             <TaskCard
               icon={<CheckSquare className="text-green-500" />}
               title="Completed Tasks"
-              count={completedTasks}
+              count={taskMetrics.completedSubtasks}
               color="border-l-4 border-green-500"
             />
           </>
         ) : userRole === "employee" ? (
-          // Employee-specific Task Cards
           <>
             <TaskCard
               icon={<List className="text-blue-500" />}
-              title="Total Tasks"
-              count={totalTasks}
+              title="Today's Total Tasks"
+              count={taskMetrics.dailyTasksTotal}
               color="border-l-4 border-blue-500"
             />
             <TaskCard
               icon={<AlertTriangle className="text-yellow-500" />}
-              title="Pending Tasks"
-              count={pendingTasks}
+              title="Today's Pending Tasks"
+              count={calculatePendingDailyTasks()}
               color="border-l-4 border-yellow-500"
             />
             <TaskCard
               icon={<CheckSquare className="text-green-500" />}
-              title="Completed Tasks"
-              count={completedTasks}
+              title="Today's Completed Tasks"
+              count={taskMetrics.dailyTasksCompleted}
               color="border-l-4 border-green-500"
             />
-            {/* Pending Task Timer for Employee */}
-            <PendingTaskTimer
-              pendingTasks={pendingTasks}
-              color="border-l-4 border-red-400"
-            />
+            <div className="p-4 bg-white rounded-xl shadow-md flex items-center space-x-4 border-l-4 border-red-400">
+              <Clock className="text-red-400" />
+              <div>
+                <h3 className="text-gray-500">Time Left Today</h3>
+                <p className="text-2xl font-bold">{new Date().toLocaleTimeString()}</p>
+                <p className="text-sm text-gray-400">
+                  Pending Tasks: {calculatePendingDailyTasks()}
+                </p>
+              </div>
+            </div>
           </>
         ) : null}
       </div>
 
       {userRole === "admin" ? (
-        <>
-          <DashboardTable />
-          <AdminTaskAssignmentTable />
-        </>
+        <DashboardTable />
       ) : userRole === "employee" ? (
-        <>
-          <TodayTaskEmployeeTable />
-          <EmployeeTasksTable />
-        </>
+        <ConnectedTaskTables 
+          tasks={tasks}
+          onTaskCompletion={handleTaskCompletion}
+        />
       ) : null}
     </div>
   );

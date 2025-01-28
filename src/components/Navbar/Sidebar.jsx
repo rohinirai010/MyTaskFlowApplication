@@ -128,7 +128,7 @@
 // export default Sidebar;
 
 
-import React from "react";
+import React, {useState,useEffect} from "react";
 import { 
   AiOutlineDashboard, 
   AiOutlinePlus, 
@@ -138,7 +138,16 @@ import {
 import { IoSettings, IoAnalyticsOutline } from "react-icons/io5";
 import { BiTask } from "react-icons/bi";
 
-const Sidebar = ({ isSidebarOpen, setIsSidebarOpen, userRole }) => {
+const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
+    const [userRole, setUserRole] = useState("");
+  
+    useEffect(() => {
+      const roleFromSession = sessionStorage.getItem("userRole");
+      const roleFromLocal = localStorage.getItem("userRole");
+      setUserRole(roleFromSession || roleFromLocal || ""); // Default to empty string if no role is found
+    }, []);
+
+
   const menuItems = [
     { 
       icon: <AiOutlineDashboard className="w-6 h-6" />, 
