@@ -51,14 +51,14 @@ const LoginForm = ({userRole}) => {
       localStorage.setItem("username", formData.username);
       sessionStorage.setItem("userRole", "admin");
       sessionStorage.setItem("username", formData.username);
-      navigate("/", { state: { userRole: "admin" } });
+      navigate("/mainpage", { state: { userRole: "admin" } });
     } else if (formData.username === "prem" && password === "prem") { // Employee login check
       // Store role and username in both localStorage and sessionStorage
       localStorage.setItem("userRole", "employee");
       localStorage.setItem("username", formData.username);
       sessionStorage.setItem("userRole", "employee");
       sessionStorage.setItem("username", formData.username);
-      navigate("/", { state: { userRole: "employee" } });
+      navigate("/mainpage", { state: { userRole: "employee" } });
     } else {
       // If credentials don't match, show an error message
       setErrors({ ...errors, username: "Invalid username or password" });
